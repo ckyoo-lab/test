@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>관리자 페이지</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            background: #f5f7fa; 
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        
+        /* 로그인 화면 */
+        #loginScreen {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 80vh;
+        }
+        .login-box {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+        .login-box h1 {
+            color: #1e3c72;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        /* 관리자 화면 */
+        #adminScreen { display: none; }
+        
+        header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: bold;
+        }
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .form-group input:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            width: 100%;
+        }
+        .btn-primary:hover { opacity: 0.9; }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .btn-logout {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            padding: 8px 16px;
+        }
+        .btn-logout:hover { background: rgba(255,255,255,0.3); }
+        
+        .btn-sm { padding: 5px 10px; font-size: 12px; margin-right: 5px; }
+        .btn-success { background: #4caf50; color: white; }
+        .btn-warning { background: #ff9800; color: white; }
+        .btn-danger { background: #f44336; color: white; }
+        
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+        .card h2 {
+            color: #1e3c72;
+            margin-bottom: 20px;
+        }
+        
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e0e0e0; }
+        th { background: #e3f2fd; color: #1976d2; font-weight: bold; }
+        tr:hover { background: #f5f5f5; }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            background: white;
+            padding: 10px;
+            border-radius: 10px;
+        }
+        .tab {
+            padding: 10px 20px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-weight: bold;
+            color: #666;
+            border-bottom: 3px solid transparent;
+        }
+        .tab.active { color: #667eea; border-bottom-color: #667eea; }
+        
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-completed { background: #d4edda; color: #155724; }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .alert-error { background: #f8d7da; color: #721c24; }
+        .alert-success { background: #d4edda; color: #155724; }
+        .alert-info { background: #d1ecf1; color: #0c5460; }
+        
+        .loading { text-align: center; padding: 40px; color: #667eea; }
+        .empty { text-align: center; padding: 40px; color: #999; }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .stat-card h3 { font-size: 2rem; margin-bottom: 5px; }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <!-- 로그인 화면 -->
+    <div id="loginScreen">
+        <div class="login-box">
+            <h1>🔐 관리자 로그인</h1>
+            <div id="loginError"></div>
+            <form onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label>이메일</label>
+                    <input type="email" id="loginEmail" required>
+                </div>
+                <div class="form-group">
+                    <label>비밀번호</label>
+                    <input type="password" id="loginPassword" required>
+                </div>
+                <button type="submit" class="btn btn-primary" id="loginBtn">로그인</button>
+            </form>
+            <div style="margin-top: 20px; padding: 15px; background: #e3f2fd; border-radius: 5px; font-size: 12px;">
+                <strong>테스트 계정:</strong><br>
+                Email: ckyoo@web2002.co.kr<br>
+                Password: Admin2024!
+            </div>
+        </div>
+    </div>
+
+    <!-- 관리자 화면 -->
+    <div id="adminScreen" class="container">
+        <header>
+            <div>
+                <h1>관리자 페이지</h1>
+                <p>수출바우처 컨설팅 관리</p>
+            </div>
+            <button class="btn btn-logout" onclick="handleLogout()">로그아웃</button>
+        </header>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('dashboard')">📊 대시보드</button>
+            <button class="tab" onclick="switchTab('contacts')">📧 문의 관리</button>
+            <button class="tab" onclick="switchTab('faqs')">❓ FAQ 관리</button>
+        </div>
+
+        <!-- 대시보드 -->
+        <div id="dashboard" class="tab-content active">
+            <div class="stats">
+                <div class="stat-card">
+                    <h3 id="totalContacts">0</h3>
+                    <p>총 문의</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="pendingContacts">0</h3>
+                    <p>미답변</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="totalFAQs">0</h3>
+                    <p>FAQ</p>
+                </div>
+            </div>
+            <div class="card">
+                <h2>최근 문의</h2>
+                <div id="recentContacts" class="loading">로딩 중...</div>
+            </div>
+        </div>
+
+        <!-- 문의 관리 -->
+        <div id="contacts" class="tab-content">
+            <div class="card">
+                <h2>문의 목록</h2>
+                <div id="contactsList" class="loading">로딩 중...</div>
+            </div>
+        </div>
+
+        <!-- FAQ 관리 -->
+        <div id="faqs" class="tab-content">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                    <h2>FAQ 관리</h2>
+                    <button class="btn btn-primary" style="width: auto;" onclick="openFAQModal()">+ 추가</button>
+                </div>
+                <div id="faqsList" class="loading">로딩 중...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FAQ 모달 -->
+    <div id="faqModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="faqModalTitle">FAQ 추가</h2>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <form onsubmit="saveFAQ(event)">
+                <input type="hidden" id="faqId">
+                <div class="form-group">
+                    <label>질문</label>
+                    <input type="text" id="faqQuestion" required>
+                </div>
+                <div class="form-group">
+                    <label>답변</label>
+                    <textarea id="faqAnswer" rows="5" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>순서</label>
+                    <input type="number" id="faqOrder" value="1" min="1">
+                </div>
+                <button type="submit" class="btn btn-primary">저장</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // ⚠️ 여기에 본인의 Supabase 정보를 입력하세요!
+        const SUPABASE_URL = 'https://your-project.supabase.co';  // 👈 수정 필요
+        const SUPABASE_KEY = 'your-anon-key';  // 👈 수정 필요
+        
+        // Supabase 초기화
+        let supabase;
+        let currentUser = null;
+
+        // 페이지 로드 시
+        window.addEventListener('load', async () => {
+            console.log('페이지 로드됨');
+            console.log('Supabase URL:', SUPABASE_URL);
+            
+            // Supabase 설정 확인
+            if (SUPABASE_URL.includes('your-project') || SUPABASE_KEY.includes('your-anon')) {
+                document.getElementById('loginError').innerHTML = 
+                    '<div class="alert alert-error">⚠️ Supabase 설정이 필요합니다. admin.html 파일의 SUPABASE_URL과 SUPABASE_KEY를 수정하세요.</div>';
+                return;
+            }
+            
+            try {
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                console.log('Supabase 클라이언트 생성됨');
+                
+                // 세션 확인
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session) {
+                    currentUser = session.user;
+                    showAdminScreen();
+                }
+            } catch (error) {
+                console.error('초기화 오류:', error);
+                document.getElementById('loginError').innerHTML = 
+                    `<div class="alert alert-error">초기화 오류: ${error.message}</div>`;
+            }
+        });
+
+        // 로그인
+        async function handleLogin(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            const btn = document.getElementById('loginBtn');
+            const errorDiv = document.getElementById('loginError');
+            
+            btn.disabled = true;
+            btn.textContent = '로그인 중...';
+            errorDiv.innerHTML = '';
+            
+            console.log('로그인 시도:', email);
+            
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+                
+                console.log('로그인 응답:', { data, error });
+                
+                if (error) {
+                    let msg = '로그인 실패: ';
+                    if (error.message.includes('Invalid')) msg += '이메일 또는 비밀번호가 틀렸습니다.';
+                    else if (error.message.includes('Email not confirmed')) msg += '이메일 확인이 필요합니다.';
+                    else msg += error.message;
+                    throw new Error(msg);
+                }
+                
+                currentUser = data.user;
+                console.log('로그인 성공!');
+                showAdminScreen();
+                
+            } catch (error) {
+                console.error('로그인 오류:', error);
+                errorDiv.innerHTML = `<div class="alert alert-error">${error.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '로그인';
+            }
+        }
+
+        // 로그아웃
+        async function handleLogout() {
+            await supabase.auth.signOut();
+            currentUser = null;
+            document.getElementById('loginScreen').style.display = 'flex';
+            document.getElementById('adminScreen').style.display = 'none';
+        }
+
+        // 관리자 화면 표시
+        function showAdminScreen() {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('adminScreen').style.display = 'block';
+            loadDashboard();
+        }
+
+        // 탭 전환
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(tab).classList.add('active');
+            
+            if (tab === 'dashboard') loadDashboard();
+            if (tab === 'contacts') loadContacts();
+            if (tab === 'faqs') loadFAQs();
+        }
+
+        // 대시보드 로드
+        async function loadDashboard() {
+            try {
+                const { data: contacts } = await supabase.from('contacts').select('*');
+                const { data: faqs } = await supabase.from('faqs').select('*');
+                
+                document.getElementById('totalContacts').textContent = contacts?.length || 0;
+                document.getElementById('pendingContacts').textContent = 
+                    contacts?.filter(c => c.status === '미답변').length || 0;
+                document.getElementById('totalFAQs').textContent = faqs?.length || 0;
+                
+                const div = document.getElementById('recentContacts');
+                if (!contacts || contacts.length === 0) {
+                    div.innerHTML = '<div class="empty">문의가 없습니다</div>';
+                    return;
+                }
+                
+                contacts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                div.innerHTML = `<table><thead><tr><th>날짜</th><th>이름</th><th>이메일</th><th>상태</th></tr></thead><tbody>` +
+                    contacts.slice(0, 5).map(c => `
+                        <tr>
+                            <td>${new Date(c.created_at).toLocaleDateString()}</td>
+                            <td>${c.name}</td>
+                            <td>${c.email}</td>
+                            <td><span class="status-badge ${c.status === '답변완료' ? 'status-completed' : 'status-pending'}">${c.status}</span></td>
+                        </tr>
+                    `).join('') + '</tbody></table>';
+            } catch (error) {
+                console.error('대시보드 로드 오류:', error);
+            }
+        }
+
+        // 문의 목록 로드
+        async function loadContacts() {
+            try {
+                const { data: contacts, error } = await supabase
+                    .from('contacts')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                const div = document.getElementById('contactsList');
+                
+                if (error) throw error;
+                if (!contacts || contacts.length === 0) {
+                    div.innerHTML = '<div class="empty">문의가 없습니다</div>';
+                    return;
+                }
+                
+                div.innerHTML = `<table><thead><tr><th>날짜</th><th>이름</th><th>이메일</th><th>연락처</th><th>상태</th><th>액션</th></tr></thead><tbody>` +
+                    contacts.map(c => `
+                        <tr>
+                            <td>${new Date(c.created_at).toLocaleString()}</td>
+                            <td>${c.name}</td>
+                            <td>${c.email}</td>
+                            <td>${c.phone}</td>
+                            <td><span class="status-badge ${c.status === '답변완료' ? 'status-completed' : 'status-pending'}">${c.status}</span></td>
+                            <td>
+                                <button class="btn btn-sm btn-success" onclick="updateStatus(${c.id}, '답변완료')">완료</button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteContact(${c.id})">삭제</button>
+                            </td>
+                        </tr>
+                    `).join('') + '</tbody></table>';
+            } catch (error) {
+                console.error('문의 로드 오류:', error);
+            }
+        }
+
+        // 문의 상태 업데이트
+        async function updateStatus(id, status) {
+            try {
+                await supabase.from('contacts').update({ status }).eq('id', id);
+                alert('상태 변경 완료');
+                loadContacts();
+                loadDashboard();
+            } catch (error) {
+                alert('오류: ' + error.message);
+            }
+        }
+
+        // 문의 삭제
+        async function deleteContact(id) {
+            if (!confirm('삭제하시겠습니까?')) return;
+            try {
+                await supabase.from('contacts').delete().eq('id', id);
+                alert('삭제 완료');
+                loadContacts();
+                loadDashboard();
+            } catch (error) {
+                alert('오류: ' + error.message);
+            }
+        }
+
+        // FAQ 목록 로드
+        async function loadFAQs() {
+            try {
+                const { data: faqs, error } = await supabase
+                    .from('faqs')
+                    .select('*')
+                    .order('order_num', { ascending: true });
+                
+                const div = document.getElementById('faqsList');
+                
+                if (error) throw error;
+                if (!faqs || faqs.length === 0) {
+                    div.innerHTML = '<div class="empty">FAQ가 없습니다</div>';
+                    return;
+                }
+                
+                div.innerHTML = `<table><thead><tr><th>순서</th><th>질문</th><th>답변</th><th>액션</th></tr></thead><tbody>` +
+                    faqs.map(f => `
+                        <tr>
+                            <td>${f.order_num}</td>
+                            <td>${f.question}</td>
+                            <td>${f.answer.substring(0, 50)}...</td>
+                            <td>
+                                <button class="btn btn-sm btn-warning" onclick='editFAQ(${JSON.stringify(f)})'>수정</button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteFAQ(${f.id})">삭제</button>
+                            </td>
+                        </tr>
+                    `).join('') + '</tbody></table>';
+            } catch (error) {
+                console.error('FAQ 로드 오류:', error);
+            }
+        }
+
+        // FAQ 모달 열기
+        function openFAQModal() {
+            document.getElementById('faqModalTitle').textContent = 'FAQ 추가';
+            document.getElementById('faqId').value = '';
+            document.getElementById('faqQuestion').value = '';
+            document.getElementById('faqAnswer').value = '';
+            document.getElementById('faqOrder').value = '1';
+            document.getElementById('faqModal').classList.add('active');
+        }
+
+        // FAQ 편집
+        function editFAQ(faq) {
+            document.getElementById('faqModalTitle').textContent = 'FAQ 수정';
+            document.getElementById('faqId').value = faq.id;
+            document.getElementById('faqQuestion').value = faq.question;
+            document.getElementById('faqAnswer').value = faq.answer;
+            document.getElementById('faqOrder').value = faq.order_num;
+            document.getElementById('faqModal').classList.add('active');
+        }
+
+        // FAQ 저장
+        async function saveFAQ(e) {
+            e.preventDefault();
+            
+            const id = document.getElementById('faqId').value;
+            const data = {
+                question: document.getElementById('faqQuestion').value,
+                answer: document.getElementById('faqAnswer').value,
+                order_num: parseInt(document.getElementById('faqOrder').value)
+            };
+            
+            try {
+                if (id) {
+                    await supabase.from('faqs').update(data).eq('id', id);
+                } else {
+                    await supabase.from('faqs').insert([data]);
+                }
+                alert('저장 완료');
+                closeModal();
+                loadFAQs();
+                loadDashboard();
+            } catch (error) {
+                alert('오류: ' + error.message);
+            }
+        }
+
+        // FAQ 삭제
+        async function deleteFAQ(id) {
+            if (!confirm('삭제하시겠습니까?')) return;
+            try {
+                await supabase.from('faqs').delete().eq('id', id);
+                alert('삭제 완료');
+                loadFAQs();
+                loadDashboard();
+            } catch (error) {
+                alert('오류: ' + error.message);
+            }
+        }
+
+        // 모달 닫기
+        function closeModal() {
+            document.getElementById('faqModal').classList.remove('active');
+        }
+    </script>
+</body>
+</html>
