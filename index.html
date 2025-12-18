@@ -18,7 +18,6 @@
             overflow-x: hidden;
         }
 
-        /* 헤더 스타일 */
         header {
             background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
             color: white;
@@ -74,7 +73,6 @@
             color: #64b5f6;
         }
 
-        /* 히어로 섹션 */
         .hero {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -147,7 +145,6 @@
             box-shadow: 0 10px 25px rgba(0,0,0,0.2);
         }
 
-        /* 섹션 공통 스타일 */
         section {
             padding: 80px 2rem;
             max-width: 1200px;
@@ -172,7 +169,6 @@
             border-radius: 2px;
         }
 
-        /* 소개 섹션 */
         .intro-content {
             background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
             padding: 3rem;
@@ -191,7 +187,6 @@
             color: #555;
         }
 
-        /* 카드 그리드 */
         .card-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -228,7 +223,6 @@
             margin-bottom: 1rem;
         }
 
-        /* 지원 내용 */
         .support-box {
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
             padding: 2rem;
@@ -263,7 +257,6 @@
             margin-right: 10px;
         }
 
-        /* 신청 절차 */
         .process-steps {
             display: flex;
             justify-content: space-between;
@@ -301,7 +294,6 @@
             color: #666;
         }
 
-        /* FAQ 섹션 */
         .faq-item {
             background: white;
             margin-bottom: 1rem;
@@ -348,7 +340,6 @@
             transition: transform 0.3s;
         }
 
-        /* 문의하기 폼 */
         .contact-form {
             max-width: 600px;
             margin: 0 auto;
@@ -403,12 +394,16 @@
             transition: all 0.3s;
         }
 
-        .submit-button:hover {
+        .submit-button:hover:not(:disabled) {
             transform: translateY(-2px);
             box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
         }
 
-        /* 푸터 */
+        .submit-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
         footer {
             background: #1e3c72;
             color: white;
@@ -420,7 +415,24 @@
             margin: 0.5rem 0;
         }
 
-        /* 반응형 */
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
         @media (max-width: 768px) {
             nav ul {
                 flex-direction: column;
@@ -628,7 +640,13 @@
 
     <section id="contact">
         <h2>문의하기</h2>
-        <form class="contact-form" onsubmit="handleSubmit(event)">
+        <form class="contact-form" id="contactForm" action="https://formspree.io/f/xpqaaber" method="POST">
+            <div class="success-message" id="successMessage">
+                ✅ 문의가 성공적으로 접수되었습니다! 빠른 시일 내에 연락드리겠습니다.
+            </div>
+            <div class="error-message" id="errorMessage">
+                ❌ 문의 접수 중 오류가 발생했습니다. 다시 시도해주세요.
+            </div>
             <div class="form-group">
                 <label for="name">회사명 / 성함 *</label>
                 <input type="text" id="name" name="name" required>
@@ -645,7 +663,7 @@
                 <label for="message">문의 내용 *</label>
                 <textarea id="message" name="message" required></textarea>
             </div>
-            <button type="submit" class="submit-button">문의 신청하기</button>
+            <button type="submit" class="submit-button" id="submitBtn">문의 신청하기</button>
         </form>
     </section>
 
@@ -656,18 +674,16 @@
     </footer>
 
     <script>
-        // FAQ 토글 기능
+        // FAQ 토글
         document.querySelectorAll('.faq-question').forEach(question => {
             question.addEventListener('click', () => {
                 const item = question.parentElement;
                 const isActive = item.classList.contains('active');
                 
-                // 모든 FAQ 항목 닫기
                 document.querySelectorAll('.faq-item').forEach(faq => {
                     faq.classList.remove('active');
                 });
                 
-                // 클릭한 항목만 열기 (이미 열려있었다면 닫힌 상태 유지)
                 if (!isActive) {
                     item.classList.add('active');
                 }
@@ -688,12 +704,47 @@
             });
         });
 
-        // 폼 제출 처리
-        function handleSubmit(e) {
+        // Formspree 폼 제출 처리
+        const form = document.getElementById('contactForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const successMsg = document.getElementById('successMessage');
+        const errorMsg = document.getElementById('errorMessage');
+
+        form.addEventListener('submit', async function(e) {
             e.preventDefault();
-            alert('문의가 접수되었습니다! 빠른 시일 내에 연락드리겠습니다.');
-            e.target.reset();
-        }
+            
+            submitBtn.disabled = true;
+            submitBtn.textContent = '전송 중...';
+            successMsg.style.display = 'none';
+            errorMsg.style.display = 'none';
+            
+            try {
+                const formData = new FormData(form);
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    successMsg.style.display = 'block';
+                    form.reset();
+                    setTimeout(() => {
+                        successMsg.style.display = 'none';
+                    }, 5000);
+                } else {
+                    throw new Error('Form submission failed');
+                }
+            } catch (error) {
+                errorMsg.style.display = 'block';
+                console.error('Error:', error);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '문의 신청하기';
+            }
+        });
     </script>
 </body>
 </html>
